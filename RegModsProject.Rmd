@@ -1,0 +1,80 @@
+---
+title: "Regression Models Course Project"
+author: "Tiffany Stoeke"
+date: "September 26, 2015"
+output: 
+  pdf_document:
+    fig_width: 5
+    fig_height: 4
+geometry: margin=.75in
+---
+##Executive Summary:
+In this project, we are asked to imagine that we work for Motor Trend magazine.  Looking at a data set of a collection of cars, our magazine is interested in exploring the relationship between a set of variables and miles per gallon (MPG).  They are particularly interested in determining if an automatic or manual transmission is better for MPG, and to quantify the MPG difference between automatic and manual transmissions.
+
+Our data set comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles, all of which are 1973-74 models.  (The data was extracted from the 1974 Motor Trend US magazine.)
+
+After performing multivariable regression, our findings were that while manual transmission is better for MPG than automatic, there are other variables that affect MPG more significantly that transmission type, such as horsepower and weight of the vehicle. 
+
+##Exploratory Data Analysis
+To begin our exploration of the data, we created a boxplot to compare automatic and manual transmissions and their effect on MPG.  Per our boxplot (see Appendix, Plot 1), the mean MPG for automatic transmissions is 17.14 and the mean for manual transmissions is 24.39, an improvement in 7.24 mpg on average.  Our confidence intervals (see appendix) verifies these values and shows that the p-value is low, indicating our results are significant and the means of these two categories are not equivalent (null hypothesis).
+
+This simplistic boxplot does answer the two questions posed by the project rubric.  However, with so many variables in our data set and many that appear to be specific to the engine itself, let's check if there are confounding variables that skew our results.
+
+##Exploration of Correlations Between Variables
+Per our review of the correlation between variables, mpg is highly correlated with weight (wt), number of cylinders (cyl), engine displacement (disp), and horsepower (hp).
+```{r,echo=FALSE}
+cor(mtcars)[1,]
+```
+Because of this correlation, we will evaluate these variables for confounders.  The data, as set up in our table, includes a number of variables that should be coerced as factors rather than as numeric values - these are V/S (vs), automatic/manual (am), number of gears (gear), number of cylinders (cyl), and number of carburetors (carb).  Cylinders and carburetors are considered factor variables in this report per forum discussions and the conclusion that number of cylinders/carburetors does not affect fuel consumption as would be mathematically suggested if the values in these columns were treated as continuous integers.  Making these changes creates the baseline reference model as one with 4 cylinders, automatic transmission, 3 gears, and 1 carburetor.  
+
+##Modeling Results
+###"Remember that all models are wrong, but some are useful." -- George Box
+In our first model, we concern ourselves with only MPG and transmission type, as requested in the project rubric.  Per the model summary (see Appendix), our p values show significance, but our adjusted R squared value shows this model only accounds for 34% of variance.  If we include all variables in our model, the adjusted R squared value jumps to 78%;  however, our summary lm function shows that each individual variable has a p value well over our 5% threshold and are therefore not significant while the model as a whole is significant.  Hence we know we have confounders in our midst!
+
+The R function "step" leads us to a new potential model - per the step results (not shown due to page constraints), R indicates that the best model fit is cyl+hp+wt+am.  We create a new lm fit model (called "fit1") of this set of variables and see that in this set, our p values for the number of cylinders is split, while the transmission type is shown as not significant.  Standard error is relatively low, however, and our R squared value is a whopping 84%.  Are we guilty of overfitting?  Can we do better?
+
+Removing cylinders from consideration and running an lm summary on the new fit ("fit2") gives us similar values.  This is actually good news - our F statistic has jumped, our standard error is still low and our R squared is still a high 82%.  Our p values are all significant except for transmission type, so even though our project asks for review of mpg based on transmission type, what happens if we remove transmission as a confounder itself?
+
+"Fit3" accomplishes this step.  Our p values now indicate that both remaining variables (wt and hp) are significant, as is the p value for the model as a whole.  Our F statistic has more than doubled from our initial "fit1" model, and our R squared is still a very high 81%.  Therefore removing transmission type did little to affect our model outcome and therefore is not necessary when running regression analysis on this data set.
+
+##Diagnostics/Residuals
+We next ran an analysis of variation (ANOVA) on our selected models to further compare/verify our model selection.  Two sets of anova results were generated to compare like variables in nested order.  After full anova comparisons were completed, fit3 (mpg~wt+hp) has come out on top as the best of the models reviewed in this project.
+
+An exploration of the residuals of our chosen fit (see Appendix, Plot 3) shows that our selected model works quite well.  The "Residuals vs Fitted" plot does not indicate strong patterns that would require further analysis, therefore heteroskedasticity does not appear to be an issue.  Our "Normal Q-Q"" plot shows a linear relationship, therefore normality of errors.  The "Scale-Location" plot shows that all points are less than 1.5 standard deviations away with no distinct pattern that requires further evaluation.  The final plot ("Residuals vs Leverage") shows that while there are a few individual points that indicate potential outliers, no individual plot shows to have both high leverage and high influence at the same time.
+
+##Quantification of Results - Conclusion
+Per our final results, an interpretation of our coefficients show that an increase in 1,000lb of weight leads to a decrease in an average of 4 mpg while an increase in 1 hp leads to a decrease in approximately 0.03 mpg.  The horsepower result appears minuscule, but our hp range in the data set is 52-335 hp, therefore this is not an insignificant affect when total hp is considered.  Our 95% confidence intervals are also included in the appendix and reinforce these averages.  Note that if we included automatic vs. manual transmission in the data, we would see that the switch to manual transmission adds roughly 2.1 mpg, however due to confounding variables this data is not reliable.
+
+\newpage
+
+##Appendix
+
+```{r, fig.width=4,fig.height=3,echo=FALSE,size="small"}
+data(mtcars)
+##Exploratory Data Analysis - Plot 1
+boxplot(mpg~am,xlab="Transmission Type",ylab="MPG",main="Plot 1",names=c("0=Automatic","1=Manual"),data=mtcars)
+##T.test btw auto & manual
+t.test(mpg~am,data=mtcars)
+mtcars$cyl<-as.factor(mtcars$cyl)
+mtcars$vs<-as.factor(mtcars$vs)
+mtcars$am<-as.factor(mtcars$am)
+mtcars$gear<-as.factor(mtcars$gear)
+mtcars$carb<-as.factor(mtcars$carb)
+fit<-lm(mpg~am,data=mtcars)  
+summary(fit)
+fit1<-lm(mpg~cyl+wt+hp+am,data=mtcars)
+summary(fit1)
+fit2<-lm(mpg~wt+hp+am,data=mtcars)
+summary(fit2)
+fit3<-lm(mpg~wt+hp,data=mtcars)
+summary(fit3)
+anova(fit,fit2,fit1)
+anova(fit3,fit2)
+confint(fit3)
+```
+```{r, fig.width=5,fig.height=4,fig.show='asis',echo=FALSE}
+##Plot 3 Residuals
+par(mfrow = c(2, 2), cex.axis = 0.8, mar = c(4.5, 3.5, 3.5, 2.5))
+plot(fit3)
+```
+
